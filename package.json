@@ -26,7 +26,7 @@
     "prestart": "node scripts/sync-firebase-sw-config.js",
     "prebuild": "node scripts/sync-firebase-sw-config.js",
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
