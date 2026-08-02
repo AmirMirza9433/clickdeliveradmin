@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { authService } from "../services/authService";
-import { fcmService } from "../services/fcmService";
+import { fcmService, unlockNotificationAudio } from "../services/fcmService";
 import API from "../services/api";
 
 const AuthContext = createContext();
@@ -64,6 +64,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      await unlockNotificationAudio();
+
       // Request FCM permission and token FIRST (before login)
       const fcmToken = await fcmService.requestPermissionAndGetToken(true);
 

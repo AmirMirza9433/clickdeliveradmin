@@ -28,19 +28,23 @@ function showPushNotification(payload) {
   const data = payload.data || {};
   const title = payload.notification?.title || data.title || "Notification";
   const body = payload.notification?.body || data.message || data.body || "";
-
   const link = data.link || getLinkFromEntity(data);
 
   return self.registration.showNotification(title, {
     body,
-    icon: "/favicon.ico",
+    icon: "/logo192.png",
     badge: "/favicon.ico",
     tag: data.entityId || data.type || "admin-notification",
     data: { ...data, link },
-    sound: "/notification-sound.wav",
     requireInteraction: true,
-    vibrate: [200, 100, 200],
+    vibrate: [200, 100, 200, 100, 200],
+    silent: false,
+    renotify: true,
     actions: [
+      {
+        action: "open",
+        title: "Open",
+      },
       {
         action: "close",
         title: "Close",
@@ -50,9 +54,10 @@ function showPushNotification(payload) {
 }
 
 messaging.onBackgroundMessage((payload) => {
-  broadcastToClients(payload);
-
-  return showPushNotification(payload);
+  return Promise.all([
+    broadcastToClients(payload),
+    showPushNotification(payload),
+  ]);
 });
 
 function getLinkFromEntity(data) {
@@ -64,10 +69,14 @@ function getLinkFromEntity(data) {
       return "/custom-orders";
     case "ride":
       return "/rides";
+    case "safety_alert":
+      return "/safety-alerts";
     case "banner":
       return "/banners";
     case "chat":
       return "/chats";
+    case "withdraw":
+      return "/wallet-withdraws";
     default:
       return "/";
   }
@@ -75,6 +84,11 @@ function getLinkFromEntity(data) {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
+  if (event.action === "close") {
+    return;
+  }
+
   const link = event.notification.data?.link || "/";
 
   event.waitUntil(

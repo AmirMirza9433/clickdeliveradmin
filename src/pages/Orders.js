@@ -262,9 +262,27 @@ const Orders = () => {
                     </div>
                   </td>
                   <td>
-                    <span className={`status-pill ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <span className={`status-pill ${getStatusColor(order.status)}`}>
+                        {order.status}
+                      </span>
+                      {order.shopAvailability === 'available' && (
+                        <span className="status-pill status-delivered" style={{ fontSize: '0.7rem' }}>
+                          Shop Available
+                        </span>
+                      )}
+                      {order.shopAvailability === 'not_available' && (
+                        <span className="status-pill status-cancelled" style={{ fontSize: '0.7rem' }}>
+                          Shop Not Available
+                        </span>
+                      )}
+                      {(!order.shopAvailability || order.shopAvailability === 'pending') &&
+                        order.status === 'Pending' && (
+                          <span className="status-pill status-pending" style={{ fontSize: '0.7rem' }}>
+                            Awaiting shop
+                          </span>
+                        )}
+                    </div>
                   </td>
                   <td>
                     {order.rider ? (

@@ -12,7 +12,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { fcmService } from "../services/fcmService";
+import { fcmService, unlockNotificationAudio, playNotificationSound } from "../services/fcmService";
 import { usePermissions } from "../hooks/usePermissions";
 import { useAuth } from "../context/AuthContext";
 import { useAdminCityFilter } from "../hooks/useAdminCityFilter";
@@ -112,13 +112,15 @@ const Settings = () => {
   const handleEnablePush = async () => {
     setPushSyncing(true);
     try {
+      await unlockNotificationAudio();
       const token = await fcmService.syncTokenToServer(true);
       setPushStatus(fcmService.getPermissionStatus());
       if (token) {
         toast.success("Push notifications enabled for this browser");
+        playNotificationSound();
       } else if (!fcmService.isConfigured()) {
         toast.error(
-          "Firebase is not configured. Check admin-panel/src/config/firebase.js.",
+          "Missing Firebase VAPID key. Add it in admin-panel/src/config/firebase.js (Firebase Console → Project settings → Cloud Messaging → Web Push certificates).",
         );
       } else {
         toast.error(

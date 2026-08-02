@@ -7,30 +7,183 @@ import {
 import { authService } from "./authService";
 
 const FCM_TOKEN_KEY = "admin_fcm_token";
+const SOUND_URL = "/notification-sound.wav";
 
 let swRegistration = null;
 let foregroundListenerAttached = false;
 const foregroundSubscribers = new Set();
+let sharedAudio = null;
+let sharedAudioContext = null;
+let audioUnlocked = false;
+let unlockListenersAttached = false;
+const recentAlerts = new Map();
+const ALERT_DEDUP_MS = 5000;
 
-const dispatchForegroundPayload = (payload) => {
-  const data = payload.data || {};
-  const title = payload.notification?.title || data.title || "Notification";
-  const body = payload.notification?.body || data.message || data.body || "";
-  showSystemNotification(title, body, data);
+const alertKey = (data = {}, title = "") =>
+  `${data.type || "GENERAL"}-${data.entityId || title || data.message || "x"}`;
 
+const claimAlertSlot = (data = {}, title = "") => {
+  const key = alertKey(data, title);
+  const last = recentAlerts.get(key);
+  if (last && Date.now() - last < ALERT_DEDUP_MS) {
+    return false;
+  }
+  recentAlerts.set(key, Date.now());
+  return true;
+};
+
+const getSharedAudio = () => {
+  if (typeof window === "undefined") return null;
+  if (!sharedAudio) {
+    sharedAudio = new Audio(SOUND_URL);
+    sharedAudio.preload = "auto";
+    sharedAudio.volume = 1;
+  }
+  return sharedAudio;
+};
+
+const getSharedAudioContext = () => {
+  if (typeof window === "undefined") return null;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  if (!sharedAudioContext) {
+    sharedAudioContext = new Ctx();
+  }
+  return sharedAudioContext;
+};
+
+const playBeepFallback = async () => {
+  try {
+    const ctx = getSharedAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+    const now = ctx.currentTime;
+    const playTone = (freq, start, duration) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.type = "sine";
+      oscillator.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.35, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    };
+    // Two short beeps so it's noticeable
+    playTone(880, now, 0.18);
+    playTone(1175, now + 0.22, 0.22);
+  } catch {
+    // ignore
+  }
+};
+
+/** Call after a user gesture (login / Enable notifications) so browsers allow sound. */
+export const unlockNotificationAudio = async () => {
+  try {
+    const audio = getSharedAudio();
+    if (audio) {
+      audio.muted = true;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    }
+    const ctx = getSharedAudioContext();
+    if (ctx?.state === "suspended") {
+      await ctx.resume();
+    }
+    audioUnlocked = true;
+  } catch {
+    // Autoplay may still be blocked until a clearer gesture
+  }
+};
+
+/** Unlock audio on first click/keypress anywhere in the admin panel. */
+export const installAudioUnlockListeners = () => {
+  if (typeof window === "undefined" || unlockListenersAttached) {
+    return () => {};
+  }
+  unlockListenersAttached = true;
+
+  const unlock = () => {
+    unlockNotificationAudio();
+  };
+
+  document.addEventListener("click", unlock, true);
+  document.addEventListener("keydown", unlock, true);
+  document.addEventListener("touchstart", unlock, true);
+
+  return () => {
+    document.removeEventListener("click", unlock, true);
+    document.removeEventListener("keydown", unlock, true);
+    document.removeEventListener("touchstart", unlock, true);
+    unlockListenersAttached = false;
+  };
+};
+
+export const playNotificationSound = () => {
+  // Fresh Audio instance avoids "play interrupted" when alerts arrive quickly
+  try {
+    const audio = new Audio(SOUND_URL);
+    audio.volume = 1;
+    const playPromise = audio.play();
+    if (playPromise?.catch) {
+      playPromise.catch(() => {
+        const shared = getSharedAudio();
+        if (shared) {
+          shared.currentTime = 0;
+          shared.play().catch(() => {
+            playBeepFallback();
+          });
+          return;
+        }
+        playBeepFallback();
+      });
+    }
+  } catch {
+    playBeepFallback();
+  }
+};
+
+const dispatchToSubscribers = (payload) => {
   foregroundSubscribers.forEach((callback) => {
     try {
       callback(payload);
-    } catch (error) {
+    } catch {
+      // ignore subscriber errors
     }
   });
 };
 
-const showSystemNotification = async (title, body, data = {}) => {
-  if (typeof window === "undefined" || !("Notification" in window)) {
+/**
+ * Browser OS notification + sound.
+ * Always show popup even when the admin tab is in the background (another tab focused).
+ */
+export const showSystemNotification = async (
+  title,
+  body,
+  data = {},
+  { force = false } = {},
+) => {
+  if (typeof window === "undefined") {
     return;
   }
-  // If permission is not granted, request it
+
+  if (!claimAlertSlot(data, title)) {
+    return;
+  }
+
+  // Always attempt sound first (works best when audio was unlocked by a user gesture)
+  playNotificationSound();
+
+  if (!("Notification" in window)) {
+    return;
+  }
+
   if (Notification.permission !== "granted") {
     if (Notification.permission === "default") {
       const permission = await Notification.requestPermission();
@@ -43,62 +196,36 @@ const showSystemNotification = async (title, body, data = {}) => {
   }
 
   const options = {
-    body,
-    icon: "/favicon.ico",
+    body: body || "",
+    icon: "/logo192.png",
     badge: "/favicon.ico",
     data,
-    tag: data.entityId || data.type || "admin-notification",
-    sound: "/notification-sound.wav",
+    tag: String(data.entityId || data.type || title || "admin-notification"),
     requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [
-      {
-        action: "close",
-        title: "Close",
-      },
-    ],
+    silent: false,
+    vibrate: [200, 100, 200, 100, 200],
+    renotify: true,
   };
 
   try {
-    if ("serviceWorker" in navigator && swRegistration) {
-      await swRegistration.showNotification(title, options);
-      playNotificationSound();
-      return;
+    // Prefer SW notification — works while tab is open OR backgrounded
+    if ("serviceWorker" in navigator) {
+      const registration =
+        swRegistration || (await navigator.serviceWorker.getRegistration());
+      if (registration) {
+        await registration.showNotification(title, options);
+        return;
+      }
     }
+    // force kept for API compatibility
+    void force;
     new Notification(title, options);
-    playNotificationSound();
   } catch (error) {
-  }
-};
-
-const playNotificationSound = () => {
-  try {
-    const audioContext = new (
-      window.AudioContext || window.webkitAudioContext
-    )();
-
-    // Resume context if it's suspended (required for autoplay)
-    if (audioContext.state === "suspended") {
-      audioContext.resume();
+    try {
+      new Notification(title, options);
+    } catch {
+      // ignore
     }
-
-    const now = audioContext.currentTime;
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.value = 800;
-    oscillator.type = "sine";
-
-    gainNode.gain.setValueAtTime(0.3, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-
-    oscillator.start(now);
-    oscillator.stop(now + 0.5);
-  } catch (error) {
   }
 };
 
@@ -112,7 +239,13 @@ const attachForegroundListener = async (registration) => {
   }
 
   onMessage(messaging, (payload) => {
-    dispatchForegroundPayload(payload);
+    // Foreground FCM: list/toast/sound handled by subscribers via addNotification.
+    // Also show OS popup while tab is focused.
+    const data = payload.data || {};
+    const title = payload.notification?.title || data.title || "Notification";
+    const body = payload.notification?.body || data.message || data.body || "";
+    showSystemNotification(title, body, data, { force: true });
+    dispatchToSubscribers(payload);
   });
 
   foregroundListenerAttached = true;
@@ -123,7 +256,14 @@ const attachServiceWorkerBridge = () => {
 
   const handler = (event) => {
     if (event.data?.type === "FCM_PUSH_RECEIVED") {
-      dispatchForegroundPayload(event.data.payload);
+      // Background SW already showed the OS notification — update UI + play sound once.
+      const payload = event.data.payload || {};
+      const data = payload.data || {};
+      const title = payload.notification?.title || data.title || "Notification";
+      if (claimAlertSlot(data, title)) {
+        playNotificationSound();
+      }
+      dispatchToSubscribers(payload);
     }
   };
 
@@ -143,43 +283,43 @@ export const fcmService = {
         "/firebase-messaging-sw.js",
         { scope: "/" },
       );
-      // Wait for SW to become active
-      await new Promise((resolve) => {
-        if (registration.active) {
-          resolve();
-        } else {
-          const activateHandler = () => {
-            registration.removeEventListener("activate", activateHandler);
-            resolve();
-          };
-          registration.addEventListener("activate", activateHandler);
 
-          // Timeout after 30 seconds
-          setTimeout(() => {
-            registration.removeEventListener("activate", activateHandler);
-            resolve();
-          }, 30000);
-        }
-      });
+      if (registration.installing) {
+        await new Promise((resolve) => {
+          const worker = registration.installing;
+          const onStateChange = () => {
+            if (worker.state === "activated" || worker.state === "redundant") {
+              worker.removeEventListener("statechange", onStateChange);
+              resolve();
+            }
+          };
+          worker.addEventListener("statechange", onStateChange);
+          setTimeout(resolve, 10000);
+        });
+      }
 
       await navigator.serviceWorker.ready;
-      swRegistration = registration;
+      swRegistration = registration.active
+        ? registration
+        : (await navigator.serviceWorker.getRegistration()) || registration;
 
-      // Don't attach service worker bridge - use Firebase's onMessage() instead
-      // This prevents duplicate messages
-      // if (!swBridgeCleanup) {
-      //   swBridgeCleanup = attachServiceWorkerBridge();
-      // }
+      if (!swBridgeCleanup) {
+        swBridgeCleanup = attachServiceWorkerBridge();
+      }
 
-      await attachForegroundListener(registration);
-      return registration;
+      await attachForegroundListener(swRegistration);
+      return swRegistration;
     } catch (error) {
+      console.error("[FCM] service worker register failed:", error);
       return null;
     }
   },
 
   async requestPermissionAndGetToken(forceRefresh = false) {
     if (!vapidKey) {
+      console.warn(
+        "[FCM] Missing vapidKey in admin-panel/src/config/firebase.js",
+      );
       return null;
     }
 
@@ -187,11 +327,13 @@ export const fcmService = {
       return null;
     }
 
-    // Request notification permission
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       return null;
     }
+
+    await unlockNotificationAudio();
+
     const registration = await this.registerServiceWorker();
     if (!registration) {
       return null;
@@ -206,7 +348,8 @@ export const fcmService = {
       if (forceRefresh) {
         try {
           await deleteToken(messaging);
-        } catch (e) {
+        } catch {
+          // ignore
         }
         localStorage.removeItem(FCM_TOKEN_KEY);
       }
@@ -217,10 +360,10 @@ export const fcmService = {
 
       if (token) {
         localStorage.setItem(FCM_TOKEN_KEY, token);
-      } else {
       }
       return token || null;
     } catch (error) {
+      console.error("[FCM] getToken failed:", error);
       localStorage.removeItem(FCM_TOKEN_KEY);
       return null;
     }
@@ -236,6 +379,7 @@ export const fcmService = {
       await authService.updateFcmToken(token);
       return token;
     } catch (error) {
+      console.error("[FCM] sync token failed:", error);
       return null;
     }
   },
@@ -281,6 +425,8 @@ export const fcmService = {
   isConfigured() {
     return Boolean(vapidKey && firebaseConfig.apiKey);
   },
-};
 
-export { showSystemNotification };
+  isAudioUnlocked() {
+    return audioUnlocked;
+  },
+};

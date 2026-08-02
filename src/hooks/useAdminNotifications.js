@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { io } from "socket.io-client";
 import API from "../services/api";
-import { fcmService, showSystemNotification } from "../services/fcmService";
+import {
+  fcmService,
+  showSystemNotification,
+  unlockNotificationAudio,
+  installAudioUnlockListeners,
+} from "../services/fcmService";
 
 const STORAGE_KEY = "admin_notifications_seen";
 const NOTIFICATIONS_STORAGE_KEY = "admin_notifications_list";
@@ -57,7 +62,8 @@ export const useAdminNotifications = (user, activationRequests = []) => {
   });
   const socketRef = useRef(null);
 
-  const addNotification = useCallback((item) => {
+  const addNotification = useCallback((item, options = {}) => {
+    const { alert = true } = options;
     const id = buildNotificationId(item);
 
     // Check if this notification was added recently (prevent duplicates)
@@ -86,11 +92,27 @@ export const useAdminNotifications = (user, activationRequests = []) => {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
-    toast.success(item.title, { duration: 4000 });
+
+    toast.success(item.title, {
+      duration: 5000,
+      id: `toast-${id}`,
+    });
+
+    if (alert) {
+      showSystemNotification(item.title, item.message || "", {
+        type: item.type,
+        entityId: item.entityId,
+        entityType: item.entityType,
+        link: item.link,
+      });
+    }
   }, []);
 
   useEffect(() => {
     if (!user?._id) return undefined;
+
+    unlockNotificationAudio();
+    const removeUnlockListeners = installAudioUnlockListeners();
 
     const socketBaseUrl = API.defaults.baseURL.replace("/api", "");
     const socket = io(socketBaseUrl, {
@@ -116,6 +138,7 @@ export const useAdminNotifications = (user, activationRequests = []) => {
     });
 
     return () => {
+      removeUnlockListeners();
       socket.disconnect();
       socketRef.current = null;
     };
@@ -127,19 +150,24 @@ export const useAdminNotifications = (user, activationRequests = []) => {
     let unsubscribeForeground = () => {};
     let unsubscribeSwClick = () => {};
 
+    // FCM path: popup/sound already handled in fcmService — only hydrate the list.
     unsubscribeForeground = fcmService.setupForegroundListener((payload) => {
       const data = payload.data || {};
       const title = payload.notification?.title || data.title || "Notification";
-      const message = payload.notification?.body || data.message || "";
-      addNotification({
-        type: data.type || "GENERAL",
-        title,
-        message,
-        entityId: data.entityId,
-        entityType: data.entityType,
-        link: data.link || getLinkForNotification(data),
-        time: new Date().toISOString(),
-      });
+      const message =
+        payload.notification?.body || data.message || data.body || "";
+      addNotification(
+        {
+          type: data.type || "GENERAL",
+          title,
+          message,
+          entityId: data.entityId,
+          entityType: data.entityType,
+          link: data.link || getLinkForNotification(data),
+          time: new Date().toISOString(),
+        },
+        { alert: false },
+      );
     });
 
     unsubscribeSwClick = fcmService.setupServiceWorkerClickListener((data) => {
@@ -240,6 +268,8 @@ const getLinkForNotification = (payload) => {
       return "/banners";
     case "chat":
       return "/chats";
+    case "withdraw":
+      return "/wallet-withdraws";
     default:
       return null;
   }

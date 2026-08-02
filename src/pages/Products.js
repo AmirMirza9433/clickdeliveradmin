@@ -123,7 +123,7 @@ const Products = () => {
   }, [shopQuery]);
 
   useEffect(() => {
-    const socket = io("http://192.168.100.251:5001");
+    const socket = io("http://192.168.1.3:5001");
 
     socket.on("productUpdated", (updatedProduct) => {
       setProducts((currentProducts) =>

@@ -10,7 +10,8 @@ export const firebaseConfig = {
   appId: "1:877430124185:web:af39f158d53d6a781d1208",
 };
 
-// Add Firebase Web Push (VAPID) key here to enable admin browser push notifications
+// Web Push certificates key from Firebase Console → Project settings → Cloud Messaging
+// Without this, background browser push will not work (in-tab socket alerts still work).
 export const vapidKey = "";
 
 let app = null;
