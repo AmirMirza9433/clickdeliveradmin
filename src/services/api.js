@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://192.168.100.58:5001/api",
-  // baseURL: "https://clickdeliverbackend-latest.onrender.com/api",
+  // baseURL: "http://192.168.100.58:5001/api",
+  baseURL: "https://clickdeliverbackend-latest.onrender.com/api",
 });
 
 // Add a request interceptor to include the token

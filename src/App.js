@@ -23,6 +23,7 @@ import {
   CreditCard,
   Wallet,
   Shield,
+  Menu,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
@@ -67,7 +68,7 @@ import { adminService } from "./services/adminService";
 // Helper function to check if user can access a permission module
 const hasPermission = (user, moduleId) => hasModuleAccess(user, moduleId);
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuth();
 
@@ -171,32 +172,41 @@ const Sidebar = () => {
   });
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="logo-circle">
-          <ShoppingBag size={24} />
+    <>
+      <div 
+        className={`sidebar-overlay ${isOpen ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="logo-circle">
+            <ShoppingBag size={24} />
+          </div>
+          <div className="logo-text">ClickDeliver</div>
         </div>
-        <div className="logo-text">ClickDeliver</div>
-      </div>
-      <nav className="nav-menu">
-        {filteredNavItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${location.pathname === item.path ? "active" : ""}`}
-          >
-            <item.icon size={20} />
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="sidebar-footer">
-        <button className="nav-item logout-btn" onClick={logout}>
-          <LogOut size={20} />
-          Logout
-        </button>
-      </div>
-    </aside>
+        <nav className="nav-menu">
+          {filteredNavItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`nav-item ${location.pathname === item.path ? "active" : ""}`}
+              onClick={() => {
+                if (window.innerWidth <= 768) onClose();
+              }}
+            >
+              <item.icon size={20} />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <button className="nav-item logout-btn" onClick={logout}>
+            <LogOut size={20} />
+            Logout
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 
@@ -222,7 +232,7 @@ const getNotificationColor = (type) => {
   }
 };
 
-const Topbar = ({ theme, toggleTheme }) => {
+const Topbar = ({ theme, toggleTheme, toggleSidebar }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -264,7 +274,12 @@ const Topbar = ({ theme, toggleTheme }) => {
 
   return (
     <header className="topbar animate-fade-in">
-      <div className="page-title">Admin Dashboard</div>
+      <div className="topbar-left-section" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button className="icon-btn mobile-menu-btn" onClick={toggleSidebar}>
+          <Menu size={24} />
+        </button>
+        <div className="page-title">Admin Dashboard</div>
+      </div>
       <div className="topbar-actions">
         <button
           className="icon-btn"
@@ -917,7 +932,10 @@ const PermissionProtectedRoute = ({ children, permission, onlyMainAdmin }) => {
 };
 
 function AppContent() {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState(
+    localStorage.getItem("admin-theme") || "dark",
+  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -943,9 +961,9 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <div className="layout">
-              <Sidebar />
+              <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
               <main className="main-content">
-                <Topbar theme={theme} toggleTheme={toggleTheme} />
+                <Topbar theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setIsSidebarOpen(true)} />
                 <Routes>
                   <Route
                     path="/"

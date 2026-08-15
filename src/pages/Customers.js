@@ -103,7 +103,7 @@ const Customers = () => {
         />
       </div>
 
-      <div className="glass-panel" style={{ marginTop: "2rem" }}>
+      <div className="glass-panel" style={{ marginTop: "2rem", overflowX: "auto" }}>
         {loading ? (
           <div className="table-loader">Loading customers...</div>
         ) : (
