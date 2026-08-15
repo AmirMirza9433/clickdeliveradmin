@@ -580,6 +580,7 @@
   font-weight: 500;
   font-size: 0.875rem;
   border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .admin-table td {
@@ -587,6 +588,7 @@
   border-bottom: 1px solid var(--border-color);
   font-size: 0.95rem;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .status-badge {
