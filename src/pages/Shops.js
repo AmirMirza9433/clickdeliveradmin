@@ -19,8 +19,10 @@ import {
   Edit2,
   Check,
   X,
+  ShoppingBag,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import UserDetailsModal from '../components/UserDetailsModal';
 
 const Shops = () => {
   const { can } = usePermissions();
@@ -34,6 +36,7 @@ const Shops = () => {
   const [customEndDate, setCustomEndDate] = useState("");
   const { cities, selectedCity, setSelectedCity, cityParams } =
     useAdminCityFilter();
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchShops = async () => {
     setLoading(true);
@@ -384,6 +387,14 @@ const Shops = () => {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button 
+                        className="action-btn" 
+                        onClick={() => setSelectedUser(shop)}
+                        title="View Shop Details"
+                        style={{ color: "var(--accent-primary)" }}
+                      >
+                        <Eye size={18} />
+                      </button>
                       <Link
                         to={`/products?shop=${encodeURIComponent(shop.shopDetails?.name || "")}`}
                         className="action-btn"
@@ -395,7 +406,7 @@ const Shops = () => {
                         }}
                         title="View Shop Products"
                       >
-                        <Eye size={18} />
+                        <ShoppingBag size={18} />
                       </Link>
                       {shop.isDeleted ? (
                         <button
@@ -454,6 +465,8 @@ const Shops = () => {
           </table>
         )}
       </div>
+
+      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
   );
 };

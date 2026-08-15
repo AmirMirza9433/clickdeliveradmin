@@ -45,7 +45,7 @@ const Orders = () => {
       };
       const [ordersData, ridersData] = await Promise.all([
         adminService.getOrders(filterParams),
-        adminService.getUsers('rider', cityParams)
+        adminService.getUsers('rider', { ...cityParams, isVerified: "true" })
       ]);
       setOrders(ordersData);
       setRiders(ridersData);

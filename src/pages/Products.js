@@ -89,7 +89,7 @@ const Products = () => {
       };
       const [productsData, shopsData, citiesData] = await Promise.all([
         adminService.getProducts(filterParams),
-        adminService.getUsers("shopkeeper", cityParams),
+        adminService.getUsers("shopkeeper", { ...cityParams, isVerified: "true" }),
         adminService.getCities(),
       ]);
       setProducts(productsData.products || []);
@@ -123,7 +123,8 @@ const Products = () => {
   }, [shopQuery]);
 
   useEffect(() => {
-    const socket = io("http://192.168.1.3:5001");
+    // const socket = io("https://clickdeliverbackend-latest.onrender.com");
+    const socket = io("http://192.168.100.58:5001");
 
     socket.on("productUpdated", (updatedProduct) => {
       setProducts((currentProducts) =>

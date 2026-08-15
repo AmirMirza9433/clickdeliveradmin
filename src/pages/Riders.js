@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Search, RefreshCw, Trash2, ShieldAlert, UserCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Search, RefreshCw, Trash2, ShieldAlert, UserCheck, Eye } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import AdminDateFilter, { AdminCityFilter, getDateFilterParams } from '../components/AdminDateFilter';
 import { useAdminCityFilter } from '../hooks/useAdminCityFilter';
 import { usePermissions } from '../hooks/usePermissions';
+import UserDetailsModal from '../components/UserDetailsModal';
 
 const Riders = () => {
   const { can } = usePermissions();
@@ -14,6 +15,7 @@ const Riders = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const { cities, selectedCity, setSelectedCity, cityParams } = useAdminCityFilter();
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchRiders = async () => {
     setLoading(true);
@@ -165,6 +167,14 @@ const Riders = () => {
                   </td>
                   <td>
                     <div className="action-btns">
+                      <button 
+                        className="action-btn" 
+                        onClick={() => setSelectedUser(rider)}
+                        title="View Details"
+                        style={{ color: "var(--accent-primary)" }}
+                      >
+                        <Eye size={18} />
+                      </button>
                       {rider.isDeleted ? (
                         <button 
                           className="action-btn verify" 
@@ -220,6 +230,8 @@ const Riders = () => {
           </table>
         )}
       </div>
+
+      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
   );
 };

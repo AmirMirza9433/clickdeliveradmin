@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 const Rides = () => {
   const { can } = usePermissions();
   const [rides, setRides] = useState([]);
+  const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -20,6 +21,7 @@ const Rides = () => {
   const [selectedRide, setSelectedRide] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedRiderId, setSelectedRiderId] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const tabs = [
@@ -39,8 +41,14 @@ const Rides = () => {
         ...getDateFilterParams(dateFilter, customStartDate, customEndDate),
         ...cityParams,
       };
-      const response = await adminService.getRides(filterParams);
-      setRides(response.rides || []);
+      
+      const [ridesResponse, ridersResponse] = await Promise.all([
+        adminService.getRides(filterParams),
+        adminService.getUsers("rider", { ...cityParams, isVerified: "true" })
+      ]);
+      
+      setRides(ridesResponse.rides || []);
+      setRiders(ridersResponse || []);
     } catch (error) {
       toast.error('Failed to fetch rides');
     } finally {
@@ -77,12 +85,15 @@ const Rides = () => {
   const openEditModal = (ride) => {
     setSelectedRide(ride);
     setSelectedStatus(ride.status);
+    setSelectedRiderId(ride.rider?._id || "");
     setEditModalVisible(true);
   };
 
   const closeEditModal = () => {
     setEditModalVisible(false);
     setSelectedRide(null);
+    setSelectedStatus("");
+    setSelectedRiderId("");
   };
 
   const handleUpdateStatus = async () => {
@@ -94,6 +105,23 @@ const Rides = () => {
       closeEditModal();
     } catch (error) {
       toast.error('Failed to update ride');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAssignRider = async () => {
+    if (!selectedRiderId) {
+      toast.error("Please select a rider");
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      await adminService.assignRiderToRide(selectedRide._id, selectedRiderId);
+      toast.success("Rider assigned successfully");
+      fetchRides();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to assign rider");
     } finally {
       setIsUpdating(false);
     }
@@ -253,6 +281,33 @@ const Rides = () => {
           <div className="modal-content glass-panel" style={{ maxWidth: '500px', width: '100%' }}>
             <h3>Manage {selectedRide.type} Request</h3>
             
+            <div className="input-field" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+              <label>Assign Rider</label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div className="input-wrapper input-wrapper-select" style={{ flex: 1 }}>
+                  <select
+                    value={selectedRiderId}
+                    onChange={(e) => setSelectedRiderId(e.target.value)}
+                  >
+                    <option value="">Select a rider...</option>
+                    {riders.map(r => (
+                      <option key={r._id} value={r._id}>
+                        {r.name} {r.isOnline ? "(Online)" : "(Offline)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  className="primary-btn"
+                  onClick={handleAssignRider}
+                  disabled={isUpdating || !selectedRiderId || ['Completed', 'Cancelled'].includes(selectedRide.status)}
+                  style={{ padding: "0 1.5rem" }}
+                >
+                  Assign
+                </button>
+              </div>
+            </div>
+
             <div className="input-field" style={{ marginTop: '1.5rem' }}>
               <label>Update Status</label>
               <div className="input-wrapper input-wrapper-select">

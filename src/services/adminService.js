@@ -161,6 +161,18 @@ export const adminService = {
     });
     return response.data;
   },
+  assignRiderToRide: async (rideId, riderId) => {
+    const response = await API.put(`/admin/rides/${rideId}/assign-rider`, {
+      riderId,
+    });
+    return response.data;
+  },
+  assignRiderToCustomOrder: async (orderId, riderId) => {
+    const response = await API.put(`/admin/custom-orders/${orderId}/assign-rider`, {
+      riderId,
+    });
+    return response.data;
+  },
 
   updateOrderStatusAdmin: async (orderId, status, cancellationReason) => {
     const response = await API.put(`/admin/orders/${orderId}/status`, {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
-import { Search, RefreshCw, Trash2, Mail, Phone, MapPin, UserCheck } from 'lucide-react';
+import { Search, RefreshCw, Trash2, Mail, Phone, MapPin, UserCheck, Eye } from 'lucide-react';
 import AdminDateFilter, { AdminCityFilter, getDateFilterParams } from '../components/AdminDateFilter';
 import { useAdminCityFilter } from '../hooks/useAdminCityFilter';
 import { usePermissions } from '../hooks/usePermissions';
+import UserDetailsModal from '../components/UserDetailsModal';
 
 const Customers = () => {
   const { can } = usePermissions();
@@ -14,6 +15,7 @@ const Customers = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const { cities, selectedCity, setSelectedCity, cityParams } = useAdminCityFilter();
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -153,6 +155,15 @@ const Customers = () => {
                     </div>
                   </td>
                   <td>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button 
+                        className="action-btn" 
+                        onClick={() => setSelectedUser(customer)}
+                        title="View Details"
+                        style={{ color: "var(--accent-primary)" }}
+                      >
+                        <Eye size={18} />
+                      </button>
                     {customer.isDeleted ? (
                       <button 
                         className="action-btn verify" 
@@ -172,6 +183,7 @@ const Customers = () => {
                       </button>
                       )
                     )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -184,6 +196,8 @@ const Customers = () => {
           </table>
         )}
       </div>
+
+      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
   );
 };

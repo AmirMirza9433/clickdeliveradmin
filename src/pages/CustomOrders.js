@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 const CustomOrders = () => {
   const { can } = usePermissions();
   const [orders, setOrders] = useState([]);
+  const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -33,6 +34,7 @@ const CustomOrders = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
+  const [selectedRiderId, setSelectedRiderId] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
   const tabs = [
@@ -48,7 +50,7 @@ const CustomOrders = () => {
     { id: "Rejected", label: "Rejected" },
   ];
 
-  const fetchCustomOrders = async () => {
+  const fetchCustomOrdersAndRiders = async () => {
     setLoading(true);
     try {
       const dateParams = getDateFilterParams(
@@ -56,20 +58,26 @@ const CustomOrders = () => {
         customStartDate,
         customEndDate,
       );
-      const response = await adminService.getCustomOrders({
-        ...dateParams,
-        ...cityParams,
-      });
-      setOrders(response.orders || []);
+      
+      const [ordersData, ridersData] = await Promise.all([
+        adminService.getCustomOrders({
+          ...dateParams,
+          ...cityParams,
+        }),
+        adminService.getUsers("rider", { ...cityParams, isVerified: "true" })
+      ]);
+      
+      setOrders(ordersData.orders || []);
+      setRiders(ridersData || []);
     } catch (error) {
-      toast.error("Failed to fetch custom orders");
+      toast.error("Failed to fetch custom orders and riders");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomOrders();
+    fetchCustomOrdersAndRiders();
   }, [dateFilter, customStartDate, customEndDate, selectedCity]);
 
   const getStatusColor = (status) => {
@@ -112,6 +120,7 @@ const CustomOrders = () => {
     setSelectedOrder(order);
     setSelectedStatus(order.status);
     setFinalPrice(order.finalPrice || "");
+    setSelectedRiderId(order.rider?._id || "");
     setEditModalVisible(true);
   };
 
@@ -120,6 +129,7 @@ const CustomOrders = () => {
     setSelectedOrder(null);
     setSelectedStatus("");
     setFinalPrice("");
+    setSelectedRiderId("");
   };
 
   const handleUpdateStatus = async () => {
@@ -130,10 +140,27 @@ const CustomOrders = () => {
         finalPrice: parseFloat(finalPrice) || 0,
       });
       toast.success("Custom order updated successfully");
-      fetchCustomOrders();
+      fetchCustomOrdersAndRiders();
       closeEditModal();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update order");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAssignRider = async () => {
+    if (!selectedRiderId) {
+      toast.error("Please select a rider");
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      await adminService.assignRiderToCustomOrder(selectedOrder._id, selectedRiderId);
+      toast.success("Rider assigned successfully");
+      fetchCustomOrdersAndRiders();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to assign rider");
     } finally {
       setIsUpdating(false);
     }
@@ -150,7 +177,7 @@ const CustomOrders = () => {
         </div>
         <button
           className="primary-btn icon-text-btn"
-          onClick={fetchCustomOrders}
+          onClick={fetchCustomOrdersAndRiders}
         >
           <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           Refresh
@@ -238,6 +265,7 @@ const CustomOrders = () => {
                 <th>Description</th>
                 <th>Assets</th>
                 <th>Status</th>
+                <th>Rider</th>
                 <th>Budget / Price</th>
                 <th>Actions</th>
               </tr>
@@ -340,6 +368,15 @@ const CustomOrders = () => {
                     >
                       {order.status}
                     </span>
+                  </td>
+                  <td>
+                    {order.rider ? (
+                      <div style={{ fontSize: "0.85rem", color: "var(--text-main)" }}>
+                        {order.rider.name}
+                      </div>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Unassigned</span>
+                    )}
                   </td>
                   <td>
                     <div className="order-summary">
@@ -496,6 +533,41 @@ const CustomOrders = () => {
                   </p>
                 </div>
               )}
+            </div>
+
+            <div className="input-field" style={{ marginBottom: "1.5rem" }}>
+              <label
+                style={{
+                  fontSize: "0.85rem",
+                  marginBottom: "0.75rem",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                ASSIGN RIDER
+              </label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div className="input-wrapper input-wrapper-select" style={{ flex: 1 }}>
+                  <select
+                    value={selectedRiderId}
+                    onChange={(e) => setSelectedRiderId(e.target.value)}
+                  >
+                    <option value="">Select a rider...</option>
+                    {riders.map(r => (
+                      <option key={r._id} value={r._id}>
+                        {r.name} {r.isOnline ? "(Online)" : "(Offline)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  className="primary-btn"
+                  onClick={handleAssignRider}
+                  disabled={isUpdating || !selectedRiderId || ['Delivered', 'Cancelled'].includes(selectedOrder.status)}
+                  style={{ padding: "0 1.5rem" }}
+                >
+                  Assign
+                </button>
+              </div>
             </div>
 
             <div className="input-field" style={{ marginBottom: "1.5rem" }}>
