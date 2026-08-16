@@ -17,6 +17,11 @@ export const adminService = {
     return response.data;
   },
 
+  getRidersDistance: async (params = {}) => {
+    const response = await API.get("/admin/riders-distance", { params });
+    return response.data;
+  },
+
   getActivationRequests: async () => {
     const response = await API.get("/admin/users?activationRequested=true");
     return response.data;
@@ -179,6 +184,11 @@ export const adminService = {
       status,
       cancellationReason,
     });
+    return response.data;
+  },
+
+  updateOrderItems: async (orderId, items) => {
+    const response = await API.put(`/admin/orders/${orderId}/items`, { items });
     return response.data;
   },
 

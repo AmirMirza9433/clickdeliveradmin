@@ -63,6 +63,7 @@ import WalletDeposits from "./pages/WalletDeposits";
 import WalletWithdraws from "./pages/WalletWithdraws";
 import SubAdmins from "./pages/SubAdmins";
 import SafetyAlerts from "./pages/SafetyAlerts";
+import RidersDistance from "./pages/RidersDistance";
 import { adminService } from "./services/adminService";
 
 // Helper function to check if user can access a permission module
@@ -404,6 +405,7 @@ const Topbar = ({ theme, toggleTheme, toggleSidebar }) => {
 };
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
   const [statsData, setStatsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("all");
@@ -480,6 +482,14 @@ const DashboardHome = () => {
       value: formatCurrency(statsData?.totalShopsRevenue),
       icon: Store,
       subtitle: "Combined product sales across all shops",
+    },
+    {
+      title: "Total Distance",
+      value: `${(statsData?.totalDistanceCovered || 0).toFixed(2)} km`,
+      icon: Map,
+      subtitle: `Orders: ${(statsData?.ordersDistance || 0).toFixed(1)}km | Custom: ${(statsData?.customOrdersDistance || 0).toFixed(1)}km | Rides: ${(statsData?.ridesDistance || 0).toFixed(1)}km`,
+      onClick: () => navigate("/riders-distance"),
+      isClickable: true,
     },
     {
       title: "Total Wallet Balance",
@@ -569,8 +579,9 @@ const DashboardHome = () => {
   const renderStatCard = (stat, index) => (
     <div
       key={stat.title}
-      className="stat-card"
-      style={{ animationDelay: `${index * 100}ms` }}
+      className={`stat-card ${stat.isClickable ? 'clickable-card' : ''}`}
+      style={{ animationDelay: `${index * 100}ms`, cursor: stat.isClickable ? 'pointer' : 'default' }}
+      onClick={stat.onClick ? stat.onClick : undefined}
     >
       <div className="stat-card-header">
         <div className="stat-title">{stat.title}</div>
@@ -978,6 +989,14 @@ function AppContent() {
                     element={
                       <PermissionProtectedRoute onlyMainAdmin>
                         <SubAdmins />
+                      </PermissionProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/riders-distance"
+                    element={
+                      <PermissionProtectedRoute permission="riders">
+                        <RidersDistance />
                       </PermissionProtectedRoute>
                     }
                   />

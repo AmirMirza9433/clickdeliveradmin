@@ -10,6 +10,7 @@ import {
   BellOff,
   Image as ImageIcon,
   MapPin,
+  Clock,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { fcmService, unlockNotificationAudio, playNotificationSound } from "../services/fcmService";
@@ -30,6 +31,8 @@ const Settings = () => {
     bannerImageDailyRate: 500,
     bannerVideoDailyRate: 500,
     deliveryRadiusKm: 5,
+    appStartTime: "00:00",
+    appEndTime: "23:59",
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -85,6 +88,8 @@ const Settings = () => {
         bannerVideoDailyRate:
           data.bannerVideoDailyRate ?? data.bannerDailyRate ?? 500,
         deliveryRadiusKm: data.deliveryRadiusKm ?? 5,
+        appStartTime: data.appStartTime || "00:00",
+        appEndTime: data.appEndTime || "23:59",
       });
     } catch (error) {
       toast.error(error.message || "Error fetching settings");
@@ -418,6 +423,61 @@ const Settings = () => {
               outside this radius cannot place orders.
             </p>
           </div>
+
+          <div className="input-field" style={{ marginTop: "2rem", display: "flex", gap: "1rem" }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+                APP START TIME
+              </label>
+              <div className="input-wrapper">
+                <div className="input-icon">
+                  <Clock size={18} />
+                </div>
+                <input
+                  type="time"
+                  value={settings.appStartTime}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      appStartTime: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+                APP END TIME
+              </label>
+              <div className="input-wrapper">
+                <div className="input-icon">
+                  <Clock size={18} />
+                </div>
+                <input
+                  type="time"
+                  value={settings.appEndTime}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      appEndTime: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <p
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--text-muted)",
+              marginTop: "0.5rem",
+            }}
+          >
+            Set the operating hours of the app. Customers will see a "Closed" screen outside this time frame. (00:00 to 23:59 for 24/7).
+          </p>
 
           <div className="input-field" style={{ marginTop: "2rem" }}>
             <label style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>

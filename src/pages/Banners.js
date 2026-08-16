@@ -47,6 +47,7 @@ const Banners = () => {
     days: 1,
     targetType: "none",
     cities: [],
+    isFree: true,
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -202,6 +203,7 @@ const Banners = () => {
         days: 1,
         targetType: "none",
         cities: [],
+        isFree: true,
       });
       setShowModal(false);
       load();
@@ -222,6 +224,7 @@ const Banners = () => {
       days: 1,
       targetType: "none",
       cities: [],
+      isFree: true,
     });
   };
 
@@ -563,6 +566,32 @@ const Banners = () => {
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label>Billing Type</label>
+                <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", marginTop: "0.5rem" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", color: "white" }}>
+                    <input
+                      type="radio"
+                      name="isFree"
+                      checked={form.isFree === true}
+                      onChange={() => setForm({ ...form, isFree: true })}
+                      style={{ margin: 0, width: "auto" }}
+                    />
+                    Free
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", color: "white" }}>
+                    <input
+                      type="radio"
+                      name="isFree"
+                      checked={form.isFree === false}
+                      onChange={() => setForm({ ...form, isFree: false })}
+                      style={{ margin: 0, width: "auto" }}
+                    />
+                    Paid
+                  </label>
+                </div>
               </div>
 
               <button

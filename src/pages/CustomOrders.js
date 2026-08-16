@@ -13,8 +13,10 @@ import {
   Image as ImageIcon,
   Mic,
   Edit,
+  Eye,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import CustomOrderDetailsModal from "../components/CustomOrderDetailsModal";
 
 const CustomOrders = () => {
   const { can } = usePermissions();
@@ -36,6 +38,10 @@ const CustomOrders = () => {
   const [finalPrice, setFinalPrice] = useState("");
   const [selectedRiderId, setSelectedRiderId] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // View Details Modal states
+  const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [orderToView, setOrderToView] = useState(null);
 
   const tabs = [
     { id: "all", label: "All" },
@@ -417,6 +423,17 @@ const CustomOrders = () => {
                       <Edit size={18} />
                     </button>
                     )}
+                    <button
+                      className="icon-btn"
+                      onClick={() => {
+                        setOrderToView(order);
+                        setViewModalVisible(true);
+                      }}
+                      title="View Details"
+                      style={{ color: "var(--accent-primary)" }}
+                    >
+                      <Eye size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -644,6 +661,16 @@ const CustomOrders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {viewModalVisible && (
+        <CustomOrderDetailsModal 
+          order={orderToView} 
+          onClose={() => {
+            setViewModalVisible(false);
+            setOrderToView(null);
+          }} 
+        />
       )}
     </div>
   );

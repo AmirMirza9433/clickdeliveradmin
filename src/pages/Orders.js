@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 import AdminDateFilter, { AdminCityFilter, getDateFilterParams } from '../components/AdminDateFilter';
 import { useAdminCityFilter } from '../hooks/useAdminCityFilter';
 import { usePermissions } from '../hooks/usePermissions';
+import OrderDetailsModal from '../components/OrderDetailsModal';
+import AdminEditOrderItems from '../components/AdminEditOrderItems';
+import { Eye, Edit3 } from 'lucide-react';
 
 const Orders = () => {
   const { can } = usePermissions();
@@ -25,6 +28,14 @@ const Orders = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // View Details Modal states
+  const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [orderToView, setOrderToView] = useState(null);
+
+  // Edit Items Modal states
+  const [editItemsModalVisible, setEditItemsModalVisible] = useState(false);
+  const [orderToEditItems, setOrderToEditItems] = useState(null);
 
   const tabs = [
     { id: 'all', label: 'All' },
@@ -130,6 +141,18 @@ const Orders = () => {
       toast.error(error.response?.data?.message || 'Failed to update order status');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleUpdateOrderItems = async (items) => {
+    try {
+      await adminService.updateOrderItems(orderToEditItems._id, items);
+      toast.success('Order items updated successfully');
+      fetchOrdersAndRiders();
+      setEditItemsModalVisible(false);
+      setOrderToEditItems(null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update order items');
     }
   };
 
@@ -304,6 +327,30 @@ const Orders = () => {
                       <Edit size={18} />
                     </button>
                     )}
+                    <button 
+                      className="icon-btn" 
+                      onClick={() => {
+                        setOrderToView(order);
+                        setViewModalVisible(true);
+                      }}
+                      title="View Details"
+                      style={{ color: 'var(--accent-primary)' }}
+                    >
+                      <Eye size={18} />
+                    </button>
+                    {can('orders', 'edit') && (
+                    <button 
+                      className="icon-btn" 
+                      onClick={() => {
+                        setOrderToEditItems(order);
+                        setEditItemsModalVisible(true);
+                      }}
+                      title="Edit Items"
+                      style={{ color: 'var(--status-shipped)', marginLeft: '4px' }}
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -408,6 +455,27 @@ const Orders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {viewModalVisible && (
+        <OrderDetailsModal 
+          order={orderToView} 
+          onClose={() => {
+            setViewModalVisible(false);
+            setOrderToView(null);
+          }} 
+        />
+      )}
+
+      {editItemsModalVisible && (
+        <AdminEditOrderItems
+          order={orderToEditItems}
+          onClose={() => {
+            setEditItemsModalVisible(false);
+            setOrderToEditItems(null);
+          }}
+          onSave={handleUpdateOrderItems}
+        />
       )}
     </div>
   );
