@@ -124,7 +124,7 @@ const Products = () => {
 
   useEffect(() => {
     const socket = io("https://clickdeliverbackend-latest.onrender.com");
-    // const socket = io("http://192.168.1.7:5001");
+    // const socket = io("http://192.168.100.58:5001");
 
     socket.on("productUpdated", (updatedProduct) => {
       setProducts((currentProducts) =>

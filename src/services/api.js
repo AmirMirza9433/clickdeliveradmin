@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: "https://clickdeliverbackend-latest.onrender.com/api",
-  // baseURL: "http://192.168.1.7:5001/api",
+  // baseURL: "http://192.168.100.58:5001/api",
 
 });
 
