@@ -10,6 +10,11 @@ export const adminService = {
     return response.data;
   },
 
+  getPendingCounts: async () => {
+    const response = await API.get("/admin/pending-counts");
+    return response.data;
+  },
+
   getUsers: async (role, params = {}) => {
     const queryParams = { ...params };
     if (role) queryParams.role = role;

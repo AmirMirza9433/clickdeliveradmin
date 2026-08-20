@@ -1039,6 +1039,51 @@ const Banners = () => {
                           : "All"}
                     </strong>
                   </div>
+                  {b.source === "shopkeeper" && (
+                    <>
+                      {!b.isFree && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          <span>Total Amount:</span>{" "}
+                          <strong style={{ color: "var(--text-main)" }}>
+                            PKR {b.totalAmount || 0}
+                          </strong>
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        <span>Payment Method:</span>{" "}
+                        <strong style={{ color: "var(--text-main)" }}>
+                          {b.paymentMethod || "Not specified"}
+                        </strong>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        <span>Payment Status:</span>{" "}
+                        <strong style={{ 
+                          color: b.paymentStatus === 'paid' ? '#10b981' : b.paymentStatus === 'pending' ? '#f59e0b' : 'var(--text-main)',
+                          textTransform: 'capitalize' 
+                        }}>
+                          {b.paymentStatus ? b.paymentStatus.replace("_", " ") : "Not required"}
+                        </strong>
+                      </div>
+                    </>
+                  )}
                   {b.paymentScreenshot ? (
                     <div
                       style={{

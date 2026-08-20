@@ -72,6 +72,20 @@ const hasPermission = (user, moduleId) => hasModuleAccess(user, moduleId);
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuth();
+  const [pendingCounts, setPendingCounts] = useState({});
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCounts = async () => {
+      try {
+        const counts = await adminService.getPendingCounts();
+        setPendingCounts(counts);
+      } catch (error) {}
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const navItems = [
     {
@@ -98,6 +112,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Chats",
       icon: MessageCircle,
       permission: "chats",
+      badge: pendingCounts.chats || 0,
     },
     { path: "/cities", label: "Cities", icon: Map, permission: "cities" },
     {
@@ -105,12 +120,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Orders",
       icon: ShoppingBag,
       permission: "orders",
+      badge: pendingCounts.orders || 0,
     },
     {
       path: "/custom-orders",
       label: "Custom Orders",
       icon: Package,
       permission: "customOrders",
+      badge: pendingCounts.customOrders || 0,
     },
     {
       path: "/rides",
@@ -123,6 +140,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Safety Alerts",
       icon: AlertTriangle,
       permission: "rides",
+      badge: pendingCounts.safetyAlerts || 0,
     },
     {
       path: "/products",
@@ -135,10 +153,29 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Customers",
       icon: Users,
       permission: "customers",
+      badge: pendingCounts.customers || 0,
     },
-    { path: "/riders", label: "Riders", icon: Bike, permission: "riders" },
-    { path: "/shops", label: "Shops", icon: Store, permission: "shops" },
-    { path: "/banners", label: "Banners", icon: Image, permission: "banners" },
+    { 
+      path: "/riders", 
+      label: "Riders", 
+      icon: Bike, 
+      permission: "riders",
+      badge: pendingCounts.riders || 0,
+    },
+    { 
+      path: "/shops", 
+      label: "Shops", 
+      icon: Store, 
+      permission: "shops",
+      badge: pendingCounts.shops || 0,
+    },
+    { 
+      path: "/banners", 
+      label: "Banners", 
+      icon: Image, 
+      permission: "banners",
+      badge: pendingCounts.banners || 0,
+    },
     {
       path: "/payment-methods",
       label: "Payments",
@@ -150,12 +187,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Wallet Deposits",
       icon: Wallet,
       permission: "walletDeposits",
+      badge: pendingCounts.walletDeposits || 0,
     },
     {
       path: "/wallet-withdraws",
       label: "Wallet Withdraws",
       icon: Wallet,
       permission: "walletDeposits",
+      badge: pendingCounts.walletWithdraws || 0,
     },
     {
       path: "/settings",
@@ -196,7 +235,23 @@ const Sidebar = ({ isOpen, onClose }) => {
               }}
             >
               <item.icon size={20} />
-              {item.label}
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge > 0 && (
+                <span
+                  style={{
+                    backgroundColor: "#ef4444",
+                    color: "white",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    padding: "2px 6px",
+                    borderRadius: "12px",
+                    minWidth: "20px",
+                    textAlign: "center",
+                  }}
+                >
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
