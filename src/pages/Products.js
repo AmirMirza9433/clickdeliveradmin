@@ -123,8 +123,8 @@ const Products = () => {
   }, [shopQuery]);
 
   useEffect(() => {
-    const socket = io("https://clickdeliverbackend-latest.onrender.com");
-    // const socket = io("http://192.168.1.6:5001");
+    // const socket = io("https://clickdeliverbackend-latest.onrender.com");
+    const socket = io("http://192.168.100.79:5001");
 
     socket.on("productUpdated", (updatedProduct) => {
       setProducts((currentProducts) =>
