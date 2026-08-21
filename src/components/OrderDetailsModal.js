@@ -118,6 +118,12 @@ const OrderDetailsModal = ({ order, onClose }) => {
             <span>Delivery Fee</span>
             <span>PKR {order.deliveryFee || 0}</span>
           </div>
+          {order.extraDistanceFee > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+              <span>Extra Distance Fee ({order.extraDistanceKm} km)</span>
+              <span>(Included in Delivery Fee)</span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border-color)", fontSize: "1.1rem", fontWeight: "bold" }}>
             <span>Total Price</span>
             <span style={{ color: "var(--accent-primary)" }}>PKR {order.totalPrice || 0}</span>
